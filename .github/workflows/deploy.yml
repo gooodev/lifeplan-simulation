@@ -34,16 +34,20 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # src/routeTree.gen.ts は TanStack Router の Vite プラグインが
+      # ビルド時に生成する（gitignore対象で、フレッシュな checkout には存在しない）。
+      # `vp check`（静的なtscベースの型チェック）はこのファイルが無いと
+      # ルート引数の型を解決できず失敗するため、必ずビルドを先に走らせる。
+      - name: Build (SPA, base path = /${{ github.event.repository.name }}/)
+        run: pnpm run build
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+
       - run: pnpm exec vp check
 
       # `vp test`（引数なし）は watch モードで起動し続けるため、CI では
       # 一度だけ実行して終了する `vp test run` を明示的に呼ぶ。
       - run: pnpm exec vp test run
-
-      - name: Build (SPA, base path = /${{ github.event.repository.name }}/)
-        run: pnpm run build
-        env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
 
       # GitHub Pages はサーバー側のルーティングを持たないため、直接アクセス・
       # リロードされた深いURLも index.html を返すようにして SPA 側の
