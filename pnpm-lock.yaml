@@ -246,6 +246,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      page-agent:
+        specifier: ^1.12.2
+        version: 1.12.2(zod@4.4.3)
       radix-ui:
         specifier: ^1.6.7
         version: 1.6.7(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -819,6 +822,22 @@ packages:
   '@oxlint/plugins@1.73.0':
     resolution: {integrity: sha512-OhgMQeMmZA0dcFcX4/priaJZWdFECxiClgq6mRX6aatZEcV9PbKC3P3/v8U1hVjviT1i5U+vR8lAtBV6m4FXAA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+
+  '@page-agent/core@1.12.2':
+    resolution: {integrity: sha512-Z/LX6WsXqlKp7VEbr5wyjG0bc1lux4sV4HT2byKzf4OZBxeosOKiSf6RoKeFQQ0uULAsNU6XR/j27tw2XHmr3w==}
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
+
+  '@page-agent/llms@1.12.2':
+    resolution: {integrity: sha512-+fYOFCWi2q/lFsOWPoJCQ1Vir3WaynW47EfXlZtX+c2TkLwZRGXRVmpblup+7b0SmJ8JAy8dWEongCqf75aG2Q==}
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
+
+  '@page-agent/page-controller@1.12.2':
+    resolution: {integrity: sha512-faiFb/lXMJJ6vDnxZ5Pdo/YE75X9FTGCDGbQuDbYEPOsoWo+pB1xTdfAkjDEkusbkZJdh8+mQoGTJ9yLOJkUkA==}
+
+  '@page-agent/ui@1.12.2':
+    resolution: {integrity: sha512-fCa5AZM3WxFUyHGkoTfc5tDI2hCMVBRLjpo5QTVsItdr0o+SKUWM76x7cX7NkP2zd6+QBGwqce2CRJCtquKfLQ==}
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
@@ -2148,6 +2167,9 @@ packages:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
     engines: {node: '>= 0.6'}
 
+  ai-motion@0.4.8:
+    resolution: {integrity: sha512-9nQVjf8lrYQWSW0sZdb9bES4x8Ei1w9C0S62po2KvRbMjslmjm0WMeszyW771SEauDnu4YGWqurLZ/gCkCTosQ==}
+
   ajv-formats@2.1.1:
     resolution: {integrity: sha512-Wx0Kx52hxE7C18hkMEggYlEifqWZtYaRgouJor+WMdPnQyEK13vgEWyVNup7SoeeoLMsr4kf5h6dOW11I15MUA==}
     peerDependencies:
@@ -3236,6 +3258,11 @@ packages:
   p-try@2.2.0:
     resolution: {integrity: sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==}
     engines: {node: '>=6'}
+
+  page-agent@1.12.2:
+    resolution: {integrity: sha512-0VWFxKULxuqpjYwGQMtCJf7y32MwUHTHTQcQL3QrHPAEMM3jy8WuLYAOjKNsvOfwGL4bFRdyeWQNjCPCsOor+w==}
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -4404,6 +4431,24 @@ snapshots:
     optional: true
 
   '@oxlint/plugins@1.73.0': {}
+
+  '@page-agent/core@1.12.2(zod@4.4.3)':
+    dependencies:
+      '@page-agent/llms': 1.12.2(zod@4.4.3)
+      '@page-agent/page-controller': 1.12.2
+      chalk: 5.6.2
+      zod: 4.4.3
+
+  '@page-agent/llms@1.12.2(zod@4.4.3)':
+    dependencies:
+      chalk: 5.6.2
+      zod: 4.4.3
+
+  '@page-agent/page-controller@1.12.2':
+    dependencies:
+      ai-motion: 0.4.8
+
+  '@page-agent/ui@1.12.2': {}
 
   '@polka/url@1.0.0-next.29': {}
 
@@ -5748,6 +5793,8 @@ snapshots:
       mime-types: 3.0.2
       negotiator: 1.1.0
 
+  ai-motion@0.4.8: {}
+
   ajv-formats@2.1.1(ajv@8.20.0):
     optionalDependencies:
       ajv: 8.20.0
@@ -6684,6 +6731,15 @@ snapshots:
       p-limit: 2.3.0
 
   p-try@2.2.0: {}
+
+  page-agent@1.12.2(zod@4.4.3):
+    dependencies:
+      '@page-agent/core': 1.12.2(zod@4.4.3)
+      '@page-agent/llms': 1.12.2(zod@4.4.3)
+      '@page-agent/page-controller': 1.12.2
+      '@page-agent/ui': 1.12.2
+      chalk: 5.6.2
+      zod: 4.4.3
 
   parent-module@1.0.1:
     dependencies:

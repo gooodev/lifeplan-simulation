@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useActivePlan } from "@/store/hooks";
 import { JsonMenu } from "@/ui/JsonMenu";
 import { HOME_NAV_ITEM, NAV_GROUPS, findNavItem } from "@/ui/nav";
+import { PageAgentButton } from "@/ui/PageAgentButton";
 import { PlanSwitcher } from "@/ui/PlanSwitcher";
 import { ThemeToggle } from "@/ui/ThemeToggle";
 
@@ -114,6 +115,7 @@ function AppLayout() {
             </h1>
           </div>
           <JsonMenu />
+          <PageAgentButton />
           <ThemeToggle />
         </header>
         <main className="flex-1 overflow-x-auto p-6">

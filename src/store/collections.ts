@@ -19,6 +19,16 @@ export const plansCollection = createCollection(
   }),
 );
 
+/**
+ * AI操作アシスタント（PageAgent）の設定。
+ * apiKey はこのブラウザの localStorage にのみ保存し、ビルド成果物やリポジトリには含めない。
+ */
+export type PageAgentSettings = {
+  enabled: boolean;
+  apiKey: string;
+  model: string;
+};
+
 /** どのプランを表示中かという、プラン本体とは別のUI状態。1行だけのコレクションとして持つ。 */
 type AppState = {
   id: "app";
@@ -29,6 +39,7 @@ type AppState = {
    * 省略時（既存データ）は 0 = すべて表示。
    */
   eventDisplayThreshold?: number;
+  pageAgent?: PageAgentSettings;
 };
 
 export const appStateCollection = createCollection(
@@ -246,6 +257,16 @@ export function setEventDisplayThreshold(threshold: number): void {
     });
   } else {
     appStateCollection.insert({ id: "app", activePlanId: null, eventDisplayThreshold: threshold });
+  }
+}
+
+export function setPageAgentSettings(settings: PageAgentSettings): void {
+  if (appStateCollection.has("app")) {
+    appStateCollection.update("app", (draft) => {
+      draft.pageAgent = settings;
+    });
+  } else {
+    appStateCollection.insert({ id: "app", activePlanId: null, pageAgent: settings });
   }
 }
 

@@ -1,7 +1,19 @@
 import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo } from "react";
+import { DEFAULT_GEMINI_MODEL } from "@/lib/pageAgent";
 import type { Category, PlanInput } from "../domain/types";
-import { appStateCollection, categoriesCollection, plansCollection } from "./collections";
+import {
+  appStateCollection,
+  categoriesCollection,
+  plansCollection,
+  type PageAgentSettings,
+} from "./collections";
+
+const DEFAULT_PAGE_AGENT_SETTINGS: PageAgentSettings = {
+  enabled: false,
+  apiKey: "",
+  model: DEFAULT_GEMINI_MODEL,
+};
 
 /** 全プランを購読する。plansCollection の変更で自動的に再レンダリングされる。 */
 export function usePlans(): PlanInput[] {
@@ -18,6 +30,12 @@ export function useActivePlanId(): string | null {
 export function useEventDisplayThreshold(): number {
   const { data } = useLiveQuery(appStateCollection);
   return data[0]?.eventDisplayThreshold ?? 0;
+}
+
+/** AI操作アシスタント（PageAgent）の設定。未設定なら無効状態の既定値を返す。 */
+export function usePageAgentSettings(): PageAgentSettings {
+  const { data } = useLiveQuery(appStateCollection);
+  return data[0]?.pageAgent ?? DEFAULT_PAGE_AGENT_SETTINGS;
 }
 
 export function usePlan(planId: string): PlanInput | undefined {
