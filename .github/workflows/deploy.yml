@@ -20,7 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # package.json の packageManager は Vite+ 独自のオブジェクト形式
+      # （{name, version, onFail}）で、pnpm/action-setup が読める標準の
+      # "pnpm@x.y.z" 形式ではないため、バージョンをここで明示する。
       - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
 
       - uses: actions/setup-node@v4
         with:
