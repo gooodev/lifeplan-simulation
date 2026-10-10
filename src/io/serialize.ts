@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { resolveLegacyAssets, resolveLegacyReturnRates } from "../domain/legacyMigration";
+import {
+  resolveAllocation,
+  resolveLegacyAssets,
+  resolveLegacyReturnRates,
+} from "../domain/legacyMigration";
 import type { Category, PlanInput } from "../domain/types";
 
 /**
@@ -176,6 +180,14 @@ const assumptionsSchema = z.object({
   // 読み込みだけは受け付けて resolveLegacyReturnRates() で区分別へ変換する。
   investmentReturnRate: z.number().optional(),
   takeHomeRate: z.number(),
+  // 配分ルール導入前のエクスポートファイルには無いため省略可。読み込み時に既定値を補う。
+  allocation: z
+    .discriminatedUnion("mode", [
+      z.object({ mode: z.literal("none") }),
+      z.object({ mode: z.literal("minCash"), minCash: z.number() }),
+      z.object({ mode: z.literal("ratio"), cashRatioPercent: z.number() }),
+    ])
+    .optional(),
 });
 
 const planInputSchema = z.object({
@@ -256,6 +268,7 @@ export function deserializePlans(json: string): DeserializeResult {
           rest.assumptions.returnRateByCategory,
           investmentReturnRate,
         ),
+        allocation: resolveAllocation(rest.assumptions.allocation),
       },
     };
   });

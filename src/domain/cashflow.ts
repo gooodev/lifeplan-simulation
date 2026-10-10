@@ -6,7 +6,13 @@ import { expandInsurance } from "./expand/insurance";
 import { expandPension } from "./expand/pension";
 import { expandRetirement } from "./expand/retirement";
 import { expandSalary } from "./expand/salary";
-import { remainingLoanBalance, sumAssetsByCategory } from "./finance";
+import {
+  allocationTransfer,
+  createZeroByCategory,
+  remainingLoanBalance,
+  sumAssetsByCategory,
+} from "./finance";
+import { resolveAllocation } from "./legacyMigration";
 import { ageInYear, resolveTiming } from "./timing";
 import type {
   AnnualFlow,
@@ -66,7 +72,8 @@ type AssetTransferOccurrence = {
 /**
  * プラン全体を年次キャッシュフロー表に変換する。
  * 貯蓄残高の漸化式（区分ごと）: 残高[t] = 残高[t-1] × (1 + 区分の運用利回り) + その区分への収支・振替
- * 収支の余剰分（純キャッシュフロー）は cash 区分に積み上がり、資産振替イベントで他区分へ移せる。
+ * 各年の処理順: 運用収益の計上 → 収支を cash へ → 資産振替イベント → 配分ルールによる現金・投資の自動付け替え。
+ * 収支の余剰分（純キャッシュフロー）は cash 区分に積み上がり、資産振替イベントや配分ルールで他区分へ移せる。
  * （検算: docs/private/lifeplan.pdf 5-2 初年度 3,698 + 664 = 4,362 と一致、運用利回り0%の場合）
  */
 export function simulate(input: PlanInput): CashflowRow[] {
@@ -149,10 +156,13 @@ export function simulate(input: PlanInput): CashflowRow[] {
     const totalExpense = sumCategoryValues(expenseByCategory);
     const netFlow = totalIncome - totalExpense;
 
+    const returnByCategory = createZeroByCategory();
     for (const category of Object.keys(balanceByCategory) as AssetCategory[]) {
       const returnRatio = (input.assumptions.returnRateByCategory[category] ?? 0) / 100;
-      balanceByCategory[category] *= 1 + returnRatio;
+      returnByCategory[category] = balanceByCategory[category] * returnRatio;
+      balanceByCategory[category] += returnByCategory[category];
     }
+    const totalReturn = sumCategoryValues(returnByCategory);
 
     balanceByCategory.cash += netFlow;
 
@@ -160,6 +170,15 @@ export function simulate(input: PlanInput): CashflowRow[] {
       balanceByCategory[transfer.fromCategory] -= transfer.amount;
       balanceByCategory[transfer.toCategory] += transfer.amount;
     }
+
+    const autoTransfer = allocationTransfer(
+      balanceByCategory.cash,
+      balanceByCategory.investment,
+      // 移行前のデータ（allocation 未設定）でも落ちないよう、ここでも既定値を補う。
+      resolveAllocation(input.assumptions.allocation),
+    );
+    balanceByCategory.cash -= autoTransfer;
+    balanceByCategory.investment += autoTransfer;
 
     const assetsByCategory = { ...balanceByCategory };
     const balance = sumCategoryValues(assetsByCategory);
@@ -195,6 +214,9 @@ export function simulate(input: PlanInput): CashflowRow[] {
       netFlow,
       balance,
       assetsByCategory,
+      returnByCategory,
+      totalReturn,
+      autoTransfer,
       liabilities,
       totalLiabilities,
       events: eventsByYear.get(year) ?? [],

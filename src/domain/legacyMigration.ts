@@ -1,6 +1,6 @@
 import { createZeroByCategory } from "./finance";
 import { createId } from "./id";
-import type { AssetCategory, CurrentAsset } from "./types";
+import type { AllocationRule, AssetCategory, CurrentAsset } from "./types";
 
 /**
  * 旧バージョン（試算開始時点の資産が currentSavings という単一の数値だった頃）の
@@ -41,4 +41,12 @@ export function resolveLegacyReturnRates(
     return { cash: rate, investment: rate, realEstate: rate, other: rate };
   }
   return createZeroByCategory();
+}
+
+/**
+ * 配分ルール（allocation）が導入される前のデータには値が無いため、
+ * 従来の挙動（自動配分なし）を補う。
+ */
+export function resolveAllocation(allocation: AllocationRule | undefined): AllocationRule {
+  return allocation ?? { mode: "none" };
 }

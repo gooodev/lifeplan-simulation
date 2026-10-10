@@ -20,12 +20,12 @@ import {
 } from "@/components/ui/table";
 import { sumAssets } from "@/domain/finance";
 import { ASSET_CATEGORIES } from "@/domain/types";
-import type { AssetCategory, CurrentAsset } from "@/domain/types";
+import type { AllocationMode, AllocationRule, AssetCategory, CurrentAsset } from "@/domain/types";
 import { createId } from "@/domain/id";
 import { updatePlan } from "@/store/collections";
 import { useActivePlan } from "@/store/hooks";
 import { AssetTransferTable } from "@/ui/AssetTransferTable";
-import { NumberField } from "@/ui/fields";
+import { NumberField, SelectField } from "@/ui/fields";
 import { formatMan } from "@/ui/format";
 import { ASSET_CATEGORY_LABELS } from "@/ui/labels";
 
@@ -34,6 +34,24 @@ export const Route = createFileRoute("/_app/current-status")({
 });
 
 const ASSET_CATEGORY_OPTIONS = Object.entries(ASSET_CATEGORY_LABELS) as [AssetCategory, string][];
+
+const ALLOCATION_MODE_OPTIONS: { value: AllocationMode; label: string }[] = [
+  { value: "none", label: "自動配分しない（余剰は現金に積み上げ）" },
+  { value: "minCash", label: "最低現金額を残し、残りを投資" },
+  { value: "ratio", label: "現金と投資の割合を指定" },
+];
+
+/** モード切替時の初期値。切替直後から意味のある試算結果になるよう、よくある水準を置く。 */
+function createAllocationRule(mode: AllocationMode): AllocationRule {
+  switch (mode) {
+    case "none":
+      return { mode: "none" };
+    case "minCash":
+      return { mode: "minCash", minCash: 300 };
+    case "ratio":
+      return { mode: "ratio", cashRatioPercent: 30 };
+  }
+}
 
 function CurrentStatusPage() {
   const plan = useActivePlan();
@@ -52,6 +70,11 @@ function CurrentStatusPage() {
       assets: p.assets.map((asset) => (asset.id === assetId ? { ...asset, ...changes } : asset)),
     }));
   };
+
+  const setAllocation = (allocation: AllocationRule) => {
+    updatePlan(plan.id, (p) => ({ ...p, assumptions: { ...p.assumptions, allocation } }));
+  };
+  const allocation = plan.assumptions.allocation ?? { mode: "none" };
 
   const removeAsset = (assetId: string) => {
     updatePlan(plan.id, (p) => ({
@@ -187,8 +210,7 @@ function CurrentStatusPage() {
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-sm text-muted-foreground">
-              資産区分ごとの運用利回り（収支の余剰分は毎年 現金・預金
-              に積み上がり、上の振替で他区分へ移せます）
+              資産区分ごとの運用利回り（税引き後の想定値。前年末の残高にかかり、キャッシュフロー表の「運用収益」に表示されます）
             </span>
             <div className="flex flex-wrap gap-3">
               {ASSET_CATEGORIES.map((category) => (
@@ -213,6 +235,44 @@ function CurrentStatusPage() {
                 />
               ))}
             </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="w-72">
+                <SelectField
+                  label="現金と投資の配分"
+                  value={allocation.mode}
+                  options={ALLOCATION_MODE_OPTIONS}
+                  onChange={(mode) => setAllocation(createAllocationRule(mode))}
+                />
+              </div>
+              {allocation.mode === "minCash" && (
+                <NumberField
+                  label="最低現金額"
+                  value={allocation.minCash}
+                  suffix="万円"
+                  onChange={(minCash) => setAllocation({ mode: "minCash", minCash })}
+                />
+              )}
+              {allocation.mode === "ratio" && (
+                <NumberField
+                  label="現金の割合"
+                  value={allocation.cashRatioPercent}
+                  suffix={`%（投資 ${100 - allocation.cashRatioPercent}%）`}
+                  onChange={(cashRatioPercent) =>
+                    setAllocation({ mode: "ratio", cashRatioPercent })
+                  }
+                />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {allocation.mode === "none" &&
+                "収支の余剰分は毎年 現金・預金 に積み上がります。投資へ回すには上の振替を使います。"}
+              {allocation.mode === "minCash" &&
+                "毎年末、現金が最低現金額を超えた分を投資へ回します。下回った場合は投資から取り崩し、投資も尽きると現金がマイナスになります。"}
+              {allocation.mode === "ratio" &&
+                "毎年末、現金と投資の合計がこの割合になるよう配分し直します（不動産・その他は対象外）。"}
+            </p>
           </div>
           <NumberField
             label="手取り換算率"
