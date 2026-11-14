@@ -220,12 +220,18 @@ export function SummaryView({ plan }: SummaryViewProps) {
         </CardContent>
       </Card>
 
-      <p className="text-sm text-foreground">
-        純資産（{selectedRow.year}年時点）:{" "}
-        <span className="font-semibold">
-          {formatMan(selectedRow.balance - selectedRow.totalLiabilities)}
-        </span>
-      </p>
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-foreground">
+        <p>
+          運用収益（{selectedRow.year}年）:{" "}
+          <span className="font-semibold">{formatMan(selectedRow.totalReturn)}</span>
+        </p>
+        <p>
+          純資産（{selectedRow.year}年時点）:{" "}
+          <span className="font-semibold">
+            {formatMan(selectedRow.balance - selectedRow.totalLiabilities)}
+          </span>
+        </p>
+      </div>
     </div>
   );
 }

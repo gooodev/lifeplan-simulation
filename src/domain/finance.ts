@@ -1,5 +1,5 @@
 import { ASSET_CATEGORIES } from "./types";
-import type { AssetCategory, CurrentAsset, Loan } from "./types";
+import type { AllocationRule, AssetCategory, CurrentAsset, Loan } from "./types";
 
 /** 資産の内訳から、貯蓄残高計算の初期値となる合計額を求める。 */
 export function sumAssets(assets: CurrentAsset[]): number {
@@ -22,6 +22,21 @@ export function createZeroByCategory(): Record<AssetCategory, number> {
     record[category] = 0;
   }
   return record;
+}
+
+/**
+ * 配分ルールに従い、現金から投資へ付け替える額を求める（負なら投資から現金への取り崩し）。
+ * 取り崩しは投資残高の範囲までなので、投資が尽きた後の不足は現金のマイナスとして残る。
+ */
+export function allocationTransfer(cash: number, investment: number, rule: AllocationRule): number {
+  if (rule.mode === "none") {
+    return 0;
+  }
+  const targetCash =
+    rule.mode === "minCash"
+      ? rule.minCash
+      : Math.max(cash + investment, 0) * (Math.min(Math.max(rule.cashRatioPercent, 0), 100) / 100);
+  return Math.max(cash - targetCash, -Math.max(investment, 0));
 }
 
 /**

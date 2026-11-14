@@ -20,6 +20,7 @@ export function makeAssumptions(overrides: Partial<Assumptions> = {}): Assumptio
   return {
     returnRateByCategory: createZeroByCategory(),
     takeHomeRate: 100,
+    allocation: { mode: "none" },
     ...overrides,
   };
 }

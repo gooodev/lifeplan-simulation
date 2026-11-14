@@ -65,13 +65,32 @@ FP に依頼して作成したライフプラン帳票（`docs/private/lifeplan.
 `period`/`amount`）で明示的に振り替える（例: 毎月の積立NISA拠出 = 現金→投資への定期振替）。
 `assetTransfer` は収支（収入・支出）には一切計上しない。
 
-`simulate()`（`src/domain/cashflow.ts`）内の年次漸化式（区分ごと）:
+振替額を毎年入力する手間を省くため、`Assumptions.allocation`（配分ルール）で現金と投資の
+配分を自動計算できる（`allocationTransfer()`、`src/domain/finance.ts`）:
+
+| mode      | 挙動                                                                                                   |
+| --------- | ------------------------------------------------------------------------------------------------------ |
+| `none`    | 自動配分しない（既定。従来の挙動）                                                                     |
+| `minCash` | 現金を `minCash`（万円）だけ残し、超過分を投資へ。不足すれば投資から取り崩す                           |
+| `ratio`   | 現金＋投資の合計のうち `cashRatioPercent`（%）を現金、残りを投資にする（合計がマイナスなら全額現金側） |
+
+取り崩しは投資残高の範囲まで。投資が尽きた後の不足は現金のマイナスとして残り、
+キャッシュフロー表の資産内訳で強調表示される。不動産・その他の区分は対象外。
+
+`simulate()`（`src/domain/cashflow.ts`）内の年次漸化式（区分ごと、上から順に適用）:
 
 ```
-残高[t, 区分] = 残高[t-1, 区分] × (1 + その区分の運用利回り)
+運用収益[t, 区分] = 残高[t-1, 区分] × その区分の運用利回り
+残高[t, 区分] = 残高[t-1, 区分] + 運用収益[t, 区分]
 残高[t, cash] += 収支[t]
 残高[t, from] -= 振替額、残高[t, to] += 振替額（その年に発生した振替ごとに）
+自動振替[t] = allocationTransfer(残高[t, cash], 残高[t, investment], 配分ルール)
+残高[t, cash] -= 自動振替[t]、残高[t, investment] += 自動振替[t]
 ```
+
+運用収益（`CashflowRow.returnByCategory`/`totalReturn`）と自動振替（`autoTransfer`）は
+キャッシュフロー表に行として表示し、貯蓄残高 = 前年残高 + 収支 + 運用収益 を確認できるようにしている。
+運用益への課税は扱わないため、利回りには税引き後の想定値を入れる。
 
 検算: PDF 5-2 初年度、預貯金残高 3,698万円 + 収支 664万円 = 貯蓄残高 4,362万円
 （運用利回り0%・資産区分1つのみの場合。これは上記漸化式が単一区分に退化したケースと一致）。
@@ -143,6 +162,7 @@ FP に依頼して作成したライフプラン帳票（`docs/private/lifeplan.
 | 昇給率（`SalaryEvent.growthRate`）                             | 0%     | PDF は年収が50年間一定という前提だったため、複利成長を追加した                                                                                                                              |
 | 物価上昇率（`FlowEvent.growthRate`）                           | 0%     | 生活費・教育費などの逓増を個別イベント単位で表現できる                                                                                                                                      |
 | 資産区分ごとの運用利回り（`Assumptions.returnRateByCategory`） | 0%     | PDF は貯蓄が全額現預金（運用なし）前提だった。区分ごとに設定できるようにし、現金→投資の定期振替（積立NISA等）と組み合わせて使う                                                             |
+| 現金・投資の配分ルール（`Assumptions.allocation`）             | なし   | 最低現金額 or 現金:投資の割合を指定すると、毎年末に現金と投資を自動で付け替える（前述）                                                                                                     |
 | 手取り換算率（`Assumptions.takeHomeRate`）                     | 100%   | **既知の弱点への対応。** PDF は額面年収をそのまま収入計上しており、税・社会保険料が引かれていない。既定100%はPDFと同じ挙動（額面のまま）だが、実態に近づけたい場合は70〜80%程度に下げられる |
 | 年表・キャッシュフロー表の表示閾値                             | 0万円  | 収支イベントが多いと年表が見にくくなるため、設定画面で指定した金額未満のイベントを年表から省ける。marker（記念日等）は金額を持たないため常に表示する                                        |
 
@@ -162,6 +182,7 @@ FP に依頼して作成したライフプラン帳票（`docs/private/lifeplan.
   （`resolveLegacyAssets`。単一値は「現金・預金」区分1件として引き継ぐ）
 - `Assumptions.investmentReturnRate: number` → `returnRateByCategory: Record<AssetCategory, number>`
   （`resolveLegacyReturnRates`。単一値は挙動を変えないよう全区分に同じ値を設定する）
+- `Assumptions.allocation` が無いデータ → `{ mode: "none" }`（`resolveAllocation`。従来どおり自動配分なし）
 
 いずれも `src/domain/legacyMigration.ts` に実装し、localStorage起動時（`store/collections.ts`
 の `bootstrap()`）とJSONインポート時（`io/serialize.ts` の `deserializePlans()`）の両方から

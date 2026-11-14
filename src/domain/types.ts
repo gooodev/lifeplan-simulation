@@ -207,11 +207,27 @@ export type LifeEvent =
   | MarkerEvent
   | AssetTransferEvent;
 
+/**
+ * 現金と投資の配分ルール。毎年の収支・振替を反映した後、期末に現金と投資の間で自動的に付け替える。
+ * - none: 自動配分しない（収支の余剰はすべて cash に積み上がる。従来の挙動）
+ * - minCash: 現金を minCash（万円）だけ残し、超過分を投資へ回す。不足すれば投資から取り崩す
+ * - ratio: 現金＋投資の合計のうち cashRatioPercent（%）を現金、残りを投資になるよう毎年配分し直す
+ * 投資が尽きても現金が足りない場合は、現金がマイナスのまま残る（不足として表示される）。
+ * 不動産・その他の区分には手を付けない。
+ */
+export type AllocationRule =
+  | { mode: "none" }
+  | { mode: "minCash"; minCash: number }
+  | { mode: "ratio"; cashRatioPercent: number };
+
+export type AllocationMode = AllocationRule["mode"];
+
 export type Assumptions = {
   /**
    * 資産区分ごとに毎年適用する運用利回り（%）。既定はすべて 0（PDF互換）。
    * 収支の余剰分（純キャッシュフロー）は毎年 cash 区分に積み上がる。
-   * investment 等の利回りを効かせたい場合は AssetTransferEvent で明示的に振り替える。
+   * investment 等の利回りを効かせたい場合は allocation で自動配分するか、
+   * AssetTransferEvent で明示的に振り替える。
    */
   returnRateByCategory: Record<AssetCategory, number>;
   /**
@@ -219,6 +235,8 @@ export type Assumptions = {
    * 既定 100（PDF互換）。実態に近づけるなら 70〜80 程度を設定する。
    */
   takeHomeRate: number;
+  /** 現金と投資の自動配分ルール。既定は none（従来の挙動）。 */
+  allocation: AllocationRule;
 };
 
 /** 試算開始時点の資産の分類。現金・投資・不動産で運用利回りの前提が異なりうるため区別する。 */
@@ -301,10 +319,19 @@ export type CashflowRow = {
   totalIncome: number;
   totalExpense: number;
   netFlow: number;
-  /** 期末貯蓄残高（前年残高 × (1+運用利回り) + 収支）。assetsByCategory の合計と一致する。 */
+  /** 期末貯蓄残高（前年残高 + 運用収益 + 収支）。assetsByCategory の合計と一致する。 */
   balance: number;
   /** 期末の資産区分ごとの残高。区分ごとの運用利回り・振替を反映した内訳。 */
   assetsByCategory: Record<AssetCategory, number>;
+  /** その年の資産区分ごとの運用収益（前年末残高 × 区分の運用利回り）。 */
+  returnByCategory: Record<AssetCategory, number>;
+  /** 運用収益の合計。returnByCategory の合計と一致する。 */
+  totalReturn: number;
+  /**
+   * 配分ルール（assumptions.allocation）により現金から投資へ自動で付け替えた額。
+   * 負の値は投資から現金への取り崩しを表す。
+   */
+  autoTransfer: number;
   /** 期末時点の負債（住宅ローンの残債）の内訳。 */
   liabilities: LiabilityItem[];
   /** 負債の合計額。liabilities の合計と一致する。 */

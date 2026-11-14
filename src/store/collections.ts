@@ -1,7 +1,11 @@
 import { createCollection, localStorageCollectionOptions } from "@tanstack/react-db";
 import { createId } from "../domain/id";
 import { eventReferencesPerson, remapEventPersonIds } from "../domain/eventRefs";
-import { resolveLegacyAssets, resolveLegacyReturnRates } from "../domain/legacyMigration";
+import {
+  resolveAllocation,
+  resolveLegacyAssets,
+  resolveLegacyReturnRates,
+} from "../domain/legacyMigration";
 import type { Assumptions, Category, LifeEvent, Person, PlanInput } from "../domain/types";
 import { createZeroByCategory } from "../domain/finance";
 
@@ -77,7 +81,11 @@ export const DEFAULT_CATEGORIES: Category[] = [
 ];
 
 function createDefaultAssumptions(): Assumptions {
-  return { returnRateByCategory: createZeroByCategory(), takeHomeRate: 100 };
+  return {
+    returnRateByCategory: createZeroByCategory(),
+    takeHomeRate: 100,
+    allocation: { mode: "none" },
+  };
 }
 
 /** 新規プランの既定アイコンキー。選択肢は `src/ui/planIcons.ts` を参照。 */
@@ -138,6 +146,7 @@ async function bootstrap(): Promise<void> {
  * 旧バージョン（試算開始時点の資産が currentSavings という単一の数値、運用利回りが
  * investmentReturnRate という単一の数値だった頃）に作られたプランを、資産内訳
  * （assets）・区分別運用利回り（returnRateByCategory）へ移行する。
+ * あわせて、配分ルール（allocation）導入前のプランには既定値（自動配分なし）を補う。
  * それぞれ該当プロパティ自体が存在しないプランだけを対象にする
  * （ユーザーが資産を全件削除して空配列になったプランと区別するため）。
  */
@@ -149,7 +158,8 @@ function migrateLegacyAssets(plans: PlanInput[]): void {
     };
     const needsAssetsMigration = !Array.isArray(plan.assets);
     const needsRatesMigration = !plan.assumptions.returnRateByCategory;
-    if (!needsAssetsMigration && !needsRatesMigration) {
+    const needsAllocationMigration = !plan.assumptions.allocation;
+    if (!needsAssetsMigration && !needsRatesMigration && !needsAllocationMigration) {
       continue;
     }
 
@@ -166,6 +176,7 @@ function migrateLegacyAssets(plans: PlanInput[]): void {
     plansCollection.update(plan.id, (draft) => {
       draft.assets = assets;
       draft.assumptions.returnRateByCategory = returnRateByCategory;
+      draft.assumptions.allocation = resolveAllocation(plan.assumptions.allocation);
     });
   }
 }
